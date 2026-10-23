@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#0d0f12">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>Plata</title>
 <style>
 :root{--bg:#0d0f12;--card:#16191e;--in:#0f1216;--line:#242830;--tx:#e8eaed;--mu:#8b919a;--ok:#3ddc97;--bad:#ff6b6b;--warn:#ffc35c}
@@ -512,7 +512,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && S 
 
 function inicio() { S = load(); if (!S) { $('#main').innerHTML = ''; bienvenida(); return; } aplicar(); render(); }
 inicio();
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>
