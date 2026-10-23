@@ -1,14 +1,14 @@
 // Cache para que la app abra sin internet.
 // Responde desde caché y actualiza en segundo plano (los cambios se ven al siguiente arranque).
-const CACHE = 'plata-v2';
+const CACHE = 'plata-v3';
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon.svg',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/icon-maskable-512.png'
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable-512.png'
 ];
 
 self.addEventListener('install', e => {
