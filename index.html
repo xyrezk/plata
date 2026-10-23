@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0f12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Plata</title>
+<style>
+:root{--bg:#0d0f12;--card:#16191e;--in:#0f1216;--line:#242830;--tx:#e8eaed;--mu:#8b919a;--ok:#3ddc97;--bad:#ff6b6b;--warn:#ffc35c}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 0 calc(76px + env(safe-area-inset-bottom));min-height:100vh}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 16px 6px;max-width:560px;margin:0 auto}
+h1{font-size:19px;font-weight:650;letter-spacing:.2px}
+h1 span{color:var(--ok)}
+h2{font-size:18px;font-weight:600;margin-bottom:14px}
+main{padding:8px 16px;max-width:560px;margin:0 auto}
+a{color:var(--ok)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+.lbl{color:var(--mu);font-size:11.5px;text-transform:uppercase;letter-spacing:.9px;font-weight:600}
+.big{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;margin:2px 0 4px;letter-spacing:-.5px}
+.big small{font-size:15px;font-weight:500;color:var(--mu);letter-spacing:0}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}.mu{color:var(--mu)}
+.sm{font-size:13px}.xs{font-size:12px}
+label{display:block;color:var(--mu);font-size:13px;margin-top:12px}
+input,select{width:100%;background:var(--in);border:1px solid var(--line);color:var(--tx);border-radius:12px;padding:12px;font-size:16px;margin-top:6px;font-family:inherit;outline:none;color-scheme:dark}
+input:focus,select:focus{border-color:#3a404b}
+.btn{display:block;width:100%;background:var(--ok);color:#06140d;border:0;border-radius:12px;padding:14px;font-size:16px;font-weight:650;margin-top:14px;cursor:pointer}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--tx);font-weight:500}
+.btn.ghost.bad{color:var(--bad)}
+.icon-btn{background:none;border:0;color:var(--mu);padding:6px;cursor:pointer;display:flex}
+.icon-btn svg{width:22px;height:22px}
+.add{background:none;border:0;color:var(--ok);font-size:14px;font-weight:600;cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 2px}
+.chip{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:none;color:var(--tx);font-size:13px;cursor:pointer}
+.chip.on{background:var(--ok);color:#06140d;border-color:var(--ok);font-weight:600}
+.row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);gap:12px}
+.row:last-child{border-bottom:0;padding-bottom:0}
+.row.tap{cursor:pointer}
+.r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.x{background:none;border:0;color:#5b616b;font-size:20px;line-height:1;padding:2px 4px;cursor:pointer}
+.hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg{display:flex;background:var(--in);border:1px solid var(--line);border-radius:12px;padding:3px;margin-bottom:10px}
+.seg button{flex:1;border:0;background:none;color:var(--mu);padding:8px;border-radius:9px;font-size:14px;cursor:pointer;font-family:inherit}
+.seg button.on{background:var(--line);color:var(--tx);font-weight:600}
+.bar{height:6px;background:var(--in);border-radius:4px;margin-top:5px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok);border-radius:4px}
+.day{color:var(--mu);font-size:12px;text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin:16px 0 2px;display:flex;justify-content:space-between}
+.empty{color:var(--mu);font-size:14px;padding:6px 0 2px}
+.verdict{border-radius:12px;padding:12px;margin-top:12px;font-size:14px;line-height:1.5}
+.verdict.ok{background:#3ddc9714;color:var(--tx);border:1px solid #3ddc9740}
+.verdict.bad{background:#ff6b6b14;color:var(--tx);border:1px solid #ff6b6b40}
+.verdict.warn{background:#ffc35c14;color:var(--tx);border:1px solid #ffc35c40}
+svg.chart{width:100%;height:auto;display:block;margin-top:10px}
+nav{position:fixed;bottom:0;left:0;right:0;background:#0f1216f0;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav div{display:flex;max-width:560px;margin:0 auto}
+nav button{flex:1;background:none;border:0;color:var(--mu);padding:9px 0 10px;font-size:11.5px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font-family:inherit}
+nav button.on{color:var(--ok)}
+nav svg{width:22px;height:22px}
+.sheet-bg{position:fixed;inset:0;background:#000b;display:flex;align-items:flex-end;z-index:10;animation:f .15s}
+.sheet{background:var(--card);width:100%;max-width:560px;margin:0 auto;border-radius:20px 20px 0 0;border-top:1px solid var(--line);padding:20px 16px calc(20px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto;animation:u .2s ease-out}
+@keyframes u{from{transform:translateY(40px);opacity:.5}}
+@keyframes f{from{opacity:0}}
+#toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#e8eaed;color:#0d0f12;padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;white-space:nowrap}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <h1>Plata<span>.</span></h1>
+  <button class="icon-btn" data-act="ajustes" aria-label="Ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+</header>
+<main id="main"></main>
+<nav><div>
+  <button data-act="tab" data-tab="inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Inicio</button>
+  <button data-act="tab" data-tab="mov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Movimientos</button>
+  <button data-act="tab" data-tab="planes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16.5" rx="2"/><path d="M16 2.5v4M8 2.5v4M3 10h18"/></svg>Planes</button>
+  <button data-act="tab" data-tab="futuro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Futuro</button>
+</div></nav>
+<div id="toast"></div>
+
+<script>
+/* ---------- utilidades ---------- */
+const $ = s => document.querySelector(s);
+const KEY = 'plata.v1';
+const CATS = ['Comida','Transporte','Universidad','Salidas','Compras','Servicios','Salud','Otros'];
+const MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => (Math.round(n) < 0 ? '-' : '') + '$' + Math.abs(Math.round(n)).toLocaleString('es-CO');
+const num = v => Number(String(v ?? '').replace(/\D/g, '')) || 0;
+const miles = n => n ? Math.round(n).toLocaleString('es-CO') : '';
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const pad = n => String(n).padStart(2, '0');
+const ds = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const pd = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const today = () => ds(new Date());
+const addD = (s, n) => { const d = pd(s); d.setDate(d.getDate() + n); return ds(d); };
+const diff = (a, b) => Math.round((pd(b) - pd(a)) / 864e5);
+const fd = s => { const d = pd(s); return d.getDate() + ' ' + MES[d.getMonth()] + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : ''); };
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 1800); }
+
+/* ---------- almacenamiento ---------- */
+let S = null, memoria = null;
+function load() { try { const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; } catch (e) { return memoria; } }
+function save() { memoria = S; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+/* ---------- fechas de pago ---------- */
+// fecha real de un pago del día `dia` en el mes (y, m); maneja meses cortos y fines de semana
+function payDate(y, m, dia, finde) {
+  const last = new Date(y, m + 1, 0).getDate();
+  const d = new Date(y, m, Math.min(dia, last));
+  const w = d.getDay();
+  if (finde === 'antes') { if (w === 6) d.setDate(d.getDate() - 1); if (w === 0) d.setDate(d.getDate() - 2); }
+  if (finde === 'despues') { if (w === 6) d.setDate(d.getDate() + 2); if (w === 0) d.setDate(d.getDate() + 1); }
+  return ds(d);
+}
+function hits(dias, finde, s) {
+  const d = pd(s);
+  for (const dia of dias) for (const o of [-1, 0, 1]) if (payDate(d.getFullYear(), d.getMonth() + o, dia, finde) === s) return true;
+  return false;
+}
+
+/* ---------- motor: qué pasa un día ---------- */
+// devuelve los movimientos automáticos de la fecha s; muta el saldo de las deudas que recibe
+function eventos(s, deudas) {
+  const ev = [];
+  for (const i of S.ingresos) if (i.creado < s && hits(i.dias, i.finde, s)) ev.push({ t: 'ingreso', m: i.m, ref: i.id, n: i.n });
+  for (const f of S.fijos) if (f.creado < s && hits([f.dia], 'igual', s)) ev.push({ t: 'fijo', m: -f.m, ref: f.id, n: f.n });
+  for (const d of deudas) {
+    if (d.creado >= s || d.saldo <= 0) continue;
+    if (d.tipo === 'unico') {
+      if (s === d.fecha) { ev.push({ t: 'pago', m: -d.saldo, ref: d.id, n: d.n }); d.saldo = 0; }
+    } else if (hits([d.dia], 'igual', s)) {
+      if (d.interes) d.saldo = d.saldo * (1 + d.interes / 100);
+      const p = Math.round(Math.min(d.cuota, d.saldo));
+      d.saldo = Math.max(0, Math.round(d.saldo - p));
+      ev.push({ t: 'pago', m: -p, ref: d.id, n: d.n });
+    }
+  }
+  return ev;
+}
+const CAT_AUTO = { ingreso: 'Ingreso', fijo: 'Gasto fijo', pago: 'Pago de deuda' };
+// aplica de verdad lo que pasó desde la última vez que abriste la app (el 15 suma solo)
+function aplicar() {
+  const t = today();
+  let s = S.lastRun || t;
+  let n = 0;
+  while (s < t) {
+    s = addD(s, 1);
+    for (const e of eventos(s, S.deudas)) { S.tx.push({ id: uid(), f: s, m: e.m, t: e.t, c: CAT_AUTO[e.t], n: e.n, ref: e.ref, auto: 1 }); n++; }
+  }
+  S.lastRun = t; save();
+  if (n) setTimeout(() => toast(n === 1 ? 'Se registró 1 movimiento automático' : 'Se registraron ' + n + ' movimientos automáticos'), 400);
+}
+
+/* ---------- cálculos ---------- */
+const saldo = () => S.saldoInicial + S.tx.reduce((a, x) => a + x.m, 0);
+function baseDias() { return Math.max(1, Math.min(30, diff(S.inicio, today()) + 1)); }
+function gastoAuto() {
+  const desde = addD(today(), -29);
+  return S.tx.filter(x => x.t === 'gasto' && x.f >= desde).reduce((a, x) => a - x.m, 0) / baseDias();
+}
+const gastoDiario = () => S.gastoDiario != null ? S.gastoDiario : gastoAuto();
+
+function proyectar(hasta, extra) {
+  const t = today(), g = gastoDiario();
+  let b = saldo();
+  const deudas = S.deudas.map(d => ({ ...d }));
+  const res = {}; deudas.forEach(d => res[d.id] = { fin: null, falla: null });
+  const tot = { ing: 0, fijo: 0, pago: 0, var: 0 };
+  if (extra && extra.f <= t) { b -= extra.m; extra.b = b; extra.minB = b; extra.minF = t; }
+  const pts = [[t, b]]; let min = { b, f: t };
+  for (let s = addD(t, 1); s <= hasta; s = addD(s, 1)) {
+    b -= g; tot.var += g;
+    for (const e of eventos(s, deudas)) {
+      b += e.m;
+      if (e.t === 'ingreso') tot.ing += e.m; else if (e.t === 'fijo') tot.fijo -= e.m; else tot.pago -= e.m;
+      if (e.t === 'pago') {
+        const r = res[e.ref];
+        if (b < 0 && !r.falla) r.falla = { f: s, falta: -b };
+        if (!r.fin && deudas.find(x => x.id === e.ref).saldo <= 0) r.fin = s;
+      }
+    }
+    if (extra && s === extra.f) { b -= extra.m; extra.b = b; }
+    if (extra && s >= extra.f && (extra.minB == null || b < extra.minB)) { extra.minB = b; extra.minF = s; }
+    pts.push([s, b]);
+    if (b < min.b) min = { b, f: s };
+  }
+  return { b, pts, min, res, g, tot };
+}
+function proxIngreso() {
+  const t = today();
+  for (let i = 1; i <= 62; i++) {
+    const s = addD(t, i);
+    const ev = S.ingresos.filter(x => x.creado < s && hits(x.dias, x.finde, s));
+    if (ev.length) return { f: s, m: ev.reduce((a, x) => a + x.m, 0), dias: i };
+  }
+  return null;
+}
+function porDia(p) {
+  const deudas = S.deudas.map(d => ({ ...d }));
+  let oblig = 0;
+  for (let i = 1; i < p.dias; i++) for (const e of eventos(addD(today(), i), deudas)) if (e.m < 0) oblig -= e.m;
+  const disp = saldo() - oblig;
+  return { oblig, disp, dia: disp / p.dias };
+}
+function veredictos() {
+  const act = S.deudas.filter(d => d.saldo > 0);
+  if (!act.length) return [];
+  const r = proyectar(addD(today(), 730));
+  return act.map(d => {
+    const x = r.res[d.id];
+    if (x.falla) return { d, cls: 'bad', txt: `No alcanza: el ${fd(x.falla.f)} te faltarían ${fmt(x.falla.falta)}` };
+    if (x.fin) return { d, cls: 'ok', txt: `Alcanza ✓ · la terminas de pagar el ${fd(x.fin)}` };
+    return { d, cls: 'warn', txt: d.tipo === 'unico' ? 'Fecha de pago ya pasó' : 'Alcanza, pero con esa cuota no se termina en 2 años' };
+  });
+}
+
+/* ---------- vistas ---------- */
+let tab = 'inicio', modo = 'gasto', cat = 'Comida', fHasta = null;
+
+const txRow = x => `<div class="row"><div style="min-width:0"><div>${esc(x.n || x.c)}</div><div class="mu xs">${x.n ? esc(x.c) : ''}${x.auto ? (x.n ? ' · ' : '') + 'automático' : ''}</div></div>
+  <div class="r" style="display:flex;align-items:center;gap:8px"><span class="${x.m > 0 ? 'ok' : ''}">${x.m > 0 ? '+' : ''}${fmt(x.m)}</span><button class="x" data-act="del" data-id="${x.id}" aria-label="Borrar">×</button></div></div>`;
+const vRow = v => `<div class="row tap" data-act="edit" data-k="deudas" data-id="${v.d.id}"><div><div>${esc(v.d.n)}</div><div class="${v.cls} sm">${v.txt}</div></div>
+  <div class="r">${fmt(v.d.saldo)}<div class="mu xs">${v.d.tipo === 'unico' ? 'pago el ' + fd(v.d.fecha) : fmt(v.d.cuota) + ' cada ' + v.d.dia}</div></div></div>`;
+
+function vInicio() {
+  const b = saldo(), p = proxIngreso(), v = veredictos();
+  let h = `<div class="card"><div class="lbl">Saldo hoy</div><div class="big ${b < 0 ? 'bad' : ''}">${fmt(b)}</div>`;
+  h += p ? `<div class="mu sm">Próximo ingreso: <b class="ok">${fmt(p.m)}</b> el ${fd(p.f)} · ${p.dias === 1 ? 'mañana' : 'en ' + p.dias + ' días'}</div>`
+         : `<div class="mu sm">Agrega lo que te llega cada mes en <a href="#" data-act="tab" data-tab="planes">Planes</a> y aquí verás cuánto puedes gastar.</div>`;
+  h += '</div>';
+  if (p) {
+    const x = porDia(p);
+    h += `<div class="card"><div class="lbl">Puedes gastar</div>` + (x.disp >= 0
+      ? `<div class="big ok">${fmt(x.dia)}<small> / día</small></div><div class="mu sm">hasta el ${fd(p.f)}${x.oblig ? ` · ya apartando ${fmt(x.oblig)} de pagos que vienen antes` : ''}</div>`
+      : `<div class="big bad">${fmt(x.disp)}</div><div class="mu sm">No te alcanza para los pagos que vienen antes del ${fd(p.f)}.</div>`) + '</div>';
+  }
+  h += `<div class="card">
+    <div class="seg"><button data-act="modo" data-v="gasto" class="${modo === 'gasto' ? 'on' : ''}">Gasto</button><button data-act="modo" data-v="ingreso" class="${modo === 'ingreso' ? 'on' : ''}">Ingreso extra</button></div>
+    <input id="gM" class="money" inputmode="numeric" placeholder="$ 0" style="font-size:26px;font-weight:650;padding:12px 14px" autocomplete="off">
+    ${modo === 'gasto' ? `<div class="chips">${CATS.map(c => `<button class="chip ${c === cat ? 'on' : ''}" data-act="cat" data-c="${c}">${c}</button>`).join('')}</div>` : ''}
+    <div class="grid2"><input id="gN" placeholder="Nota (opcional)" autocomplete="off"><input id="gF" type="date" value="${today()}" max="${today()}"></div>
+    <button class="btn" data-act="addtx">Agregar ${modo === 'gasto' ? 'gasto' : 'ingreso'}</button></div>`;
+  const hoy = S.tx.filter(x => x.f === today()).reverse();
+  if (hoy.length) {
+    const g = hoy.filter(x => x.m < 0).reduce((a, x) => a - x.m, 0);
+    h += `<div class="card"><div class="hd"><span class="lbl">Hoy</span><span class="mu sm">gastado ${fmt(g)}</span></div>${hoy.map(txRow).join('')}</div>`;
+  }
+  if (v.length) h += `<div class="card"><div class="hd"><span class="lbl">Tus deudas</span></div>${v.map(vRow).join('')}</div>`;
+  return h;
+}
+
+function vMov() {
+  const mes = today().slice(0, 7), dm = pd(today());
+  const m = S.tx.filter(x => x.f.startsWith(mes));
+  const ing = m.filter(x => x.m > 0).reduce((a, x) => a + x.m, 0);
+  const gas = m.filter(x => x.m < 0).reduce((a, x) => a - x.m, 0);
+  const cats = {}; m.filter(x => x.m < 0).forEach(x => cats[x.c] = (cats[x.c] || 0) - x.m);
+  const top = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+  let h = `<div class="card"><div class="lbl">${['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][dm.getMonth()]}</div>
+    <div class="grid2" style="margin-top:8px"><div><div class="mu xs">Entró</div><div class="ok" style="font-size:20px;font-weight:650">${fmt(ing)}</div></div><div><div class="mu xs">Salió</div><div style="font-size:20px;font-weight:650">${fmt(gas)}</div></div></div>
+    ${top.length ? '<div style="margin-top:14px">' + top.map(([c, v]) => `<div style="margin-top:9px"><div class="hd sm" style="margin:0"><span>${esc(c)}</span><span class="mu">${fmt(v)}</span></div><div class="bar"><i style="width:${(v / top[0][1] * 100).toFixed(1)}%"></i></div></div>`).join('') + '</div>' : ''}</div>`;
+  const all = S.tx.map((x, i) => [x, i]).sort((a, b) => b[0].f.localeCompare(a[0].f) || b[1] - a[1]).map(a => a[0]).slice(0, 400);
+  if (!all.length) return h + `<div class="card"><div class="empty">Aún no hay movimientos. Agrega tu primer gasto en Inicio.</div></div>`;
+  let cur = '', grp = [];
+  const flush = () => { if (!grp.length) return; const g = grp.filter(x => x.m < 0).reduce((a, x) => a - x.m, 0); h += `<div class="day"><span>${cur === today() ? 'Hoy' : cur === addD(today(), -1) ? 'Ayer' : fd(cur)}</span><span>${g ? '−' + fmt(g).slice(1) : ''}</span></div><div class="card" style="padding:4px 16px 12px">${grp.map(txRow).join('')}</div>`; grp = []; };
+  for (const x of all) { if (x.f !== cur) { flush(); cur = x.f; } grp.push(x); }
+  flush();
+  return h;
+}
+
+function vPlanes() {
+  const diasTxt = d => 'cada ' + (d.length > 1 ? d.slice(0, -1).join(', ') + ' y ' + d[d.length - 1] : d[0]);
+  const sec = (t, k, rows, vacio) => `<div class="card"><div class="hd"><span class="lbl">${t}</span><button class="add" data-act="new" data-k="${k}">+ Agregar</button></div>${rows.length ? rows.join('') : `<div class="empty">${vacio}</div>`}</div>`;
+  const row = (k, id, n, sub, val, cls) => `<div class="row tap" data-act="edit" data-k="${k}" data-id="${id}"><div><div>${esc(n)}</div><div class="mu sm">${sub}</div></div><div class="r ${cls || ''}">${val}</div></div>`;
+  const v = veredictos(), pagadas = S.deudas.filter(d => d.saldo <= 0);
+  return sec('Ingresos recurrentes', 'ingresos', S.ingresos.map(i => row('ingresos', i.id, i.n, diasTxt(i.dias) + (i.finde === 'antes' ? ' · se adelanta si es finde' : i.finde === 'despues' ? ' · se corre al lunes' : ''), '+' + fmt(i.m), 'ok')), 'Ej: lo que te llega cada 15.')
+    + sec('Gastos fijos', 'fijos', S.fijos.map(f => row('fijos', f.id, f.n, 'cada ' + f.dia, fmt(-f.m))), 'Arriendo, plan del celular, transporte mensual…')
+    + `<div class="card"><div class="hd"><span class="lbl">Deudas</span><button class="add" data-act="new" data-k="deudas">+ Agregar</button></div>${v.length ? v.map(vRow).join('') : '<div class="empty">Agrega una deuda y te digo si te alcanza para pagarla.</div>'}
+      ${pagadas.length ? '<div class="mu xs" style="margin-top:14px">PAGADAS</div>' + pagadas.map(d => row('deudas', d.id, d.n, 'pagada ✓', '$0', 'mu')).join('') : ''}</div>
+    <p class="mu xs" style="padding:0 4px 8px">Los ingresos, gastos fijos y cuotas se registran solos en su fecha. Si algo no pasó, bórralo en Movimientos.</p>`;
+}
+
+function chart(pts, min) {
+  const W = 320, H = 150, P = 10, n = pts.length;
+  const mi = pts.findIndex(p => p[0] === min.f);
+  const k = Math.max(1, Math.ceil(n / 160));
+  const s = pts.filter((_, i) => i % k === 0 || i === n - 1 || i === mi);
+  const vals = s.map(p => p[1]);
+  let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals); if (hi === lo) hi = lo + 1;
+  const x = i => P + i * (W - 2 * P) / Math.max(1, s.length - 1);
+  const y = v => P + (hi - v) * (H - 2 * P) / (hi - lo);
+  const line = s.map((p, i) => x(i).toFixed(1) + ',' + y(p[1]).toFixed(1)).join(' ');
+  const smi = s.findIndex(p => p[0] === min.f);
+  return `<svg class="chart" viewBox="0 0 ${W} ${H + 18}">
+    <defs><linearGradient id="gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3ddc97" stop-opacity=".28"/><stop offset="1" stop-color="#3ddc97" stop-opacity="0"/></linearGradient></defs>
+    <polygon points="${x(0).toFixed(1)},${y(lo).toFixed(1)} ${line} ${x(s.length - 1).toFixed(1)},${y(lo).toFixed(1)}" fill="url(#gr)"/>
+    ${lo < 0 ? `<line x1="${P}" x2="${W - P}" y1="${y(0)}" y2="${y(0)}" stroke="#ff6b6b" stroke-dasharray="4 4" stroke-width="1"/>` : ''}
+    <polyline points="${line}" fill="none" stroke="#3ddc97" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${smi >= 0 ? `<circle cx="${x(smi)}" cy="${y(s[smi][1])}" r="4" fill="${min.b < 0 ? '#ff6b6b' : '#ffc35c'}"/>` : ''}
+    <text x="${P}" y="${H + 14}" fill="#8b919a" font-size="11">Hoy</text>
+    <text x="${W - P}" y="${H + 14}" fill="#8b919a" font-size="11" text-anchor="end">${fd(pts[n - 1][0])}</text></svg>`;
+}
+
+function vFuturo() {
+  const t = today(); if (!fHasta || fHasta <= t) fHasta = addD(t, 30);
+  const r = proyectar(fHasta), p = proxIngreso();
+  const pre = [p && ['Próx. ingreso', p.f], ['1 mes', addD(t, 30)], ['3 meses', addD(t, 91)], ['6 meses', addD(t, 182)], ['1 año', addD(t, 365)]].filter(Boolean);
+  return `<div class="card"><div class="lbl">¿Cuánto voy a tener?</div>
+    <div class="chips">${pre.map(([l, f]) => `<button class="chip ${f === fHasta ? 'on' : ''}" data-act="hasta" data-f="${f}">${l}</button>`).join('')}</div>
+    <input type="date" id="fH" value="${fHasta}" min="${addD(t, 1)}"></div>
+  <div class="card"><div class="lbl">El ${fd(fHasta)} tendrías</div><div class="big ${r.b < 0 ? 'bad' : ''}">${fmt(r.b)}</div>
+    ${chart(r.pts, r.min)}
+    <div style="margin-top:8px">
+      <div class="row sm"><span class="mu">Punto más bajo</span><span class="r ${r.min.b < 0 ? 'bad' : 'warn'}">${fmt(r.min.b)} · ${r.min.f === t ? 'hoy' : fd(r.min.f)}</span></div>
+      <div class="row sm"><span class="mu">Ingresos que llegan</span><span class="r ok">+${fmt(r.tot.ing)}</span></div>
+      <div class="row sm"><span class="mu">Gastos fijos</span><span class="r">${fmt(-r.tot.fijo)}</span></div>
+      <div class="row sm"><span class="mu">Cuotas de deudas</span><span class="r">${fmt(-r.tot.pago)}</span></div>
+      <div class="row sm"><span class="mu">Gasto del día a día<br><span class="xs">${fmt(r.g)}/día · ${S.gastoDiario != null ? 'fijado por ti' : 'promedio de ' + baseDias() + (baseDias() === 1 ? ' día' : ' días')}</span></span><span class="r">${fmt(-r.tot.var)}</span></div>
+    </div></div>
+  <div class="card"><div class="lbl">¿Puedo pagar algo?</div>
+    <div class="mu sm" style="margin-top:4px">Una deuda, una compra, un viaje… te digo si te alcanza sin quedar en rojo.</div>
+    <div class="grid2"><input id="sM" class="money" inputmode="numeric" placeholder="$ monto"><input id="sF" type="date" value="${addD(t, 15)}" min="${t}"></div>
+    <button class="btn" data-act="sim">Calcular</button><div id="simRes"></div></div>`;
+}
+
+function simular() {
+  const m = num($('#sM').value), f = $('#sF').value;
+  if (!m || !f) return toast('Pon el monto y la fecha');
+  const ex = { m, f }; proyectar(addD(f, 60), ex);
+  let cls, txt;
+  if (ex.b < 0) { cls = 'bad'; txt = `<b>No te alcanza.</b> El ${fd(f)} te faltarían <b>${fmt(-ex.b)}</b>.`; }
+  else if (ex.minB < 0) { cls = 'warn'; txt = `Ese día sí lo pagas (te quedan ${fmt(ex.b)}), pero el <b>${fd(ex.minF)}</b> quedarías en <b class="bad">${fmt(ex.minB)}</b> antes de que te llegue más plata.`; }
+  else { cls = 'ok'; txt = `<b>Sí puedes ✓</b> Te quedarían ${fmt(ex.b)} ese día y lo más bajo que llegarías en los 2 meses siguientes es ${fmt(ex.minB)}.`; }
+  $('#simRes').innerHTML = `<div class="verdict ${cls}">${txt}</div><button class="btn ghost" data-act="simsave">Guardarlo como deuda/pago</button>`;
+  simular.last = { m, f };
+}
+
+function render() {
+  if (!S) return;
+  $('#main').innerHTML = { inicio: vInicio, mov: vMov, planes: vPlanes, futuro: vFuturo }[tab]();
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+}
+
+/* ---------- hojas (formularios) ---------- */
+function openSheet(html, fixed) {
+  closeSheet();
+  const bg = document.createElement('div'); bg.className = 'sheet-bg'; bg.id = 'sheet';
+  bg.innerHTML = `<div class="sheet">${html}</div>`;
+  if (!fixed) bg.addEventListener('click', e => { if (e.target === bg) closeSheet(); });
+  document.body.appendChild(bg);
+}
+const closeSheet = () => $('#sheet')?.remove();
+const btns = old => `<button class="btn" id="fSave">Guardar</button>${old.id ? '<button class="btn ghost bad" id="fDel">Eliminar</button>' : '<button class="btn ghost" onclick="closeSheet()">Cancelar</button>'}`;
+function upsert(k, old, data) {
+  if (old.id) Object.assign(S[k].find(x => x.id === old.id), data);
+  else S[k].push({ id: uid(), creado: today(), ...data });
+  save(); closeSheet(); render(); toast('Guardado');
+}
+function bindDel(k, old) {
+  const b = $('#fDel'); if (!b) return;
+  b.onclick = () => { if (!confirm('¿Eliminar "' + old.n + '"? Los movimientos ya registrados se quedan.')) return; S[k] = S[k].filter(x => x.id !== old.id); save(); closeSheet(); render(); };
+}
+
+function formIngreso(i) {
+  i = i || { n: '', m: 0, dias: [15], finde: 'antes' };
+  openSheet(`<h2>${i.id ? 'Editar' : 'Nuevo'} ingreso recurrente</h2>
+    <label>Nombre<input id="fN" value="${esc(i.n)}" placeholder="Ej: Mesada, sueldo, beca"></label>
+    <label>Monto<input id="fM" class="money" inputmode="numeric" value="${miles(i.m)}" placeholder="$ 0"></label>
+    <label>Día(s) del mes en que llega<input id="fD" inputmode="numeric" value="${i.dias.join(', ')}" placeholder="15   ó   15, 30"></label>
+    <label>Si ese día cae sábado o domingo<select id="fF"><option value="igual">Llega ese mismo día</option><option value="antes">Se adelanta al viernes</option><option value="despues">Se corre al lunes</option></select></label>
+    ${btns(i)}`);
+  $('#fF').value = i.finde;
+  $('#fSave').onclick = () => {
+    const m = num($('#fM').value), dias = [...new Set($('#fD').value.split(/\D+/).map(Number).filter(d => d >= 1 && d <= 31))].sort((a, b) => a - b);
+    if (!m || !dias.length) return toast('Pon el monto y el día');
+    upsert('ingresos', i, { n: $('#fN').value.trim() || 'Ingreso', m, dias, finde: $('#fF').value });
+  };
+  bindDel('ingresos', i);
+}
+function formFijo(f) {
+  f = f || { n: '', m: 0, dia: 1 };
+  openSheet(`<h2>${f.id ? 'Editar' : 'Nuevo'} gasto fijo</h2>
+    <label>Nombre<input id="fN" value="${esc(f.n)}" placeholder="Ej: Arriendo, plan celular"></label>
+    <label>Monto<input id="fM" class="money" inputmode="numeric" value="${miles(f.m)}" placeholder="$ 0"></label>
+    <label>Día del mes en que se paga<input id="fD" inputmode="numeric" value="${f.dia}"></label>${btns(f)}`);
+  $('#fSave').onclick = () => {
+    const m = num($('#fM').value), dia = num($('#fD').value);
+    if (!m || dia < 1 || dia > 31) return toast('Pon el monto y un día entre 1 y 31');
+    upsert('fijos', f, { n: $('#fN').value.trim() || 'Gasto fijo', m, dia });
+  };
+  bindDel('fijos', f);
+}
+function formDeuda(d) {
+  d = d || { n: '', tipo: 'cuotas', saldo: 0, cuota: 0, dia: 15, interes: 0, fecha: addD(today(), 15) };
+  let tipo = d.tipo;
+  openSheet(`<h2>${d.id ? 'Editar' : 'Nueva'} deuda</h2>
+    <label>Nombre<input id="fN" value="${esc(d.n)}" placeholder="Ej: Celular, préstamo a mi tía"></label>
+    <div class="seg" style="margin-top:14px" id="fT"><button data-v="cuotas">Cuotas mensuales</button><button data-v="unico">Un solo pago</button></div>
+    <div id="tC"><label>Lo que debes hoy<input id="fS" class="money" inputmode="numeric" value="${miles(d.saldo)}" placeholder="$ 0"></label>
+      <div class="grid2"><label>Cuota mensual<input id="fC" class="money" inputmode="numeric" value="${miles(d.cuota)}" placeholder="$ 0"></label><label>Día de pago<input id="fD" inputmode="numeric" value="${d.dia}"></label></div>
+      <label>Interés mensual % (opcional)<input id="fI" inputmode="decimal" value="${d.interes || ''}" placeholder="0"></label></div>
+    <div id="tU"><label>Monto a pagar<input id="fU" class="money" inputmode="numeric" value="${miles(d.saldo)}" placeholder="$ 0"></label>
+      <label>Fecha en que la pagas<input id="fX" type="date" value="${d.fecha || addD(today(), 15)}" min="${addD(today(), 1)}"></label></div>
+    ${btns(d)}`);
+  const sync = () => { document.querySelectorAll('#fT button').forEach(b => b.classList.toggle('on', b.dataset.v === tipo)); $('#tC').style.display = tipo === 'cuotas' ? '' : 'none'; $('#tU').style.display = tipo === 'unico' ? '' : 'none'; };
+  $('#fT').onclick = e => { const b = e.target.closest('button'); if (b) { tipo = b.dataset.v; sync(); } };
+  sync();
+  $('#fSave').onclick = () => {
+    const n = $('#fN').value.trim() || 'Deuda';
+    if (tipo === 'cuotas') {
+      const saldo = num($('#fS').value), cuota = num($('#fC').value), dia = num($('#fD').value), interes = parseFloat($('#fI').value.replace(',', '.')) || 0;
+      if (!saldo || !cuota || dia < 1 || dia > 31) return toast('Completa lo que debes, la cuota y el día');
+      upsert('deudas', d, { n, tipo, saldo, cuota, dia, interes });
+    } else {
+      const saldo = num($('#fU').value), fecha = $('#fX').value;
+      if (!saldo || !fecha) return toast('Pon el monto y la fecha');
+      if (fecha <= today()) return toast('La fecha debe ser desde mañana');
+      upsert('deudas', d, { n, tipo, saldo, fecha });
+    }
+  };
+  bindDel('deudas', d);
+}
+
+function ajustes() {
+  openSheet(`<h2>Ajustes</h2>
+    <label>Corregir saldo actual (lo que tienes de verdad hoy)<input id="aS" class="money" inputmode="numeric" value="${miles(Math.max(0, saldo()))}"></label>
+    <button class="btn ghost" id="aSB">Corregir saldo</button>
+    <label>Gasto diario estimado para el futuro<input id="aG" class="money" inputmode="numeric" value="${S.gastoDiario != null ? miles(S.gastoDiario) : ''}" placeholder="Automático: ${fmt(gastoAuto())}/día"></label>
+    <div class="mu xs" style="margin-top:6px">Déjalo vacío para usar tu promedio real de los últimos 30 días.</div>
+    <button class="btn ghost" id="aGB">Guardar estimado</button>
+    <div class="lbl" style="margin-top:22px">Respaldo</div>
+    <div class="mu xs" style="margin-top:4px">Tus datos viven solo en este celular. Descarga un respaldo de vez en cuando.</div>
+    <div class="grid2"><button class="btn ghost" id="aE">Exportar</button><button class="btn ghost" id="aI">Importar</button></div>
+    <input type="file" id="aF" accept="application/json,.json" style="display:none">
+    <button class="btn ghost bad" id="aX" style="margin-top:22px">Borrar todo</button>`);
+  $('#aSB').onclick = () => {
+    const d = num($('#aS').value) - saldo();
+    if (d) S.tx.push({ id: uid(), f: today(), m: d, t: 'ajuste', c: 'Ajuste de saldo', n: '' });
+    save(); closeSheet(); render(); toast('Saldo corregido');
+  };
+  $('#aGB').onclick = () => { const v = $('#aG').value.trim(); S.gastoDiario = v ? num(v) : null; save(); closeSheet(); render(); toast('Guardado'); };
+  $('#aE').onclick = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' }));
+    a.download = 'plata-respaldo-' + today() + '.json'; a.click();
+  };
+  $('#aI').onclick = () => $('#aF').click();
+  $('#aF').onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    file.text().then(t => {
+      const d = JSON.parse(t);
+      if (!Array.isArray(d.tx) || !Array.isArray(d.ingresos)) throw 0;
+      if (!confirm('Esto reemplaza todos tus datos actuales. ¿Seguir?')) return;
+      S = d; save(); aplicar(); closeSheet(); render(); toast('Respaldo importado');
+    }).catch(() => toast('Ese archivo no es un respaldo válido'));
+  };
+  $('#aX').onclick = () => { if (!confirm('¿Borrar TODOS tus datos? No se puede deshacer.')) return; try { localStorage.removeItem(KEY); } catch (e) {} S = null; memoria = null; closeSheet(); inicio(); };
+}
+
+function bienvenida() {
+  openSheet(`<h2>Hola 👋</h2><div class="mu sm">Para empezar, ¿cuánta plata tienes hoy en total (efectivo + cuentas)?</div>
+    <label>Saldo actual<input id="bS" class="money" inputmode="numeric" placeholder="$ 0" style="font-size:22px;font-weight:600"></label>
+    <button class="btn" id="bB">Empezar</button>`, true);
+  $('#bB').onclick = () => {
+    S = { v: 1, saldoInicial: num($('#bS').value), inicio: today(), lastRun: today(), tx: [], ingresos: [], fijos: [], deudas: [], gastoDiario: null };
+    save(); closeSheet(); tab = 'planes'; render(); toast('Ahora agrega lo que te llega cada mes');
+  };
+}
+
+/* ---------- eventos ---------- */
+document.addEventListener('input', e => {
+  if (e.target.classList.contains('money')) { const v = e.target.value.replace(/\D/g, '').slice(0, 13); e.target.value = v ? Number(v).toLocaleString('es-CO') : ''; }
+});
+document.addEventListener('change', e => { if (e.target.id === 'fH' && e.target.value) { fHasta = e.target.value; render(); } });
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const a = el.dataset.act;
+  if (a === 'tab') { e.preventDefault(); tab = el.dataset.tab; render(); scrollTo(0, 0); }
+  else if (a === 'modo') { modo = el.dataset.v; render(); }
+  else if (a === 'cat') { cat = el.dataset.c; document.querySelectorAll('.chip[data-act=cat]').forEach(c => c.classList.toggle('on', c === el)); }
+  else if (a === 'addtx') {
+    const m = num($('#gM').value), f = $('#gF').value || today();
+    if (!m) return toast('Escribe el monto');
+    if (f > today()) return toast('La fecha no puede ser futura');
+    S.tx.push(modo === 'gasto' ? { id: uid(), f, m: -m, t: 'gasto', c: cat, n: $('#gN').value.trim() } : { id: uid(), f, m, t: 'ingreso', c: 'Ingreso extra', n: $('#gN').value.trim() });
+    save(); render(); toast(modo === 'gasto' ? 'Gasto agregado' : 'Ingreso agregado');
+  }
+  else if (a === 'del') {
+    const x = S.tx.find(t => t.id === el.dataset.id); if (!x) return;
+    if (!confirm('¿Borrar este movimiento de ' + fmt(x.m) + '?')) return;
+    if (x.t === 'pago') { const d = S.deudas.find(d => d.id === x.ref); if (d) d.saldo += -x.m; }
+    S.tx = S.tx.filter(t => t.id !== x.id); save(); render();
+  }
+  else if (a === 'new' || a === 'edit') {
+    const k = el.dataset.k, it = a === 'edit' ? S[k].find(x => x.id === el.dataset.id) : null;
+    ({ ingresos: formIngreso, fijos: formFijo, deudas: formDeuda })[k](it);
+  }
+  else if (a === 'hasta') { fHasta = el.dataset.f; render(); }
+  else if (a === 'sim') simular();
+  else if (a === 'simsave') { const l = simular.last; if (!l) return; if (l.f <= today()) return toast('Para guardarlo, la fecha debe ser desde mañana'); formDeuda({ n: '', tipo: 'unico', saldo: l.m, fecha: l.f }); }
+  else if (a === 'ajustes') { if (S) ajustes(); }
+});
+document.addEventListener('visibilitychange', () => { if (!document.hidden && S && S.lastRun !== today()) { aplicar(); render(); } });
+
+function inicio() { S = load(); if (!S) { $('#main').innerHTML = ''; bienvenida(); return; } aplicar(); render(); }
+inicio();
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
