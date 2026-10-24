@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Plata</title>
 <style>
 :root{--bg:#0d0f12;--card:#16191e;--in:#0f1216;--line:#242830;--tx:#e8eaed;--mu:#8b919a;--ok:#3ddc97;--bad:#ff6b6b;--warn:#ffc35c}
@@ -103,11 +103,61 @@ const today = () => ds(new Date());
 const addD = (s, n) => { const d = pd(s); d.setDate(d.getDate() + n); return ds(d); };
 const diff = (a, b) => Math.round((pd(b) - pd(a)) / 864e5);
 const fd = s => { const d = pd(s); return d.getDate() + ' ' + MES[d.getMonth()] + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : ''); };
+function descargar(nombre, contenido, tipo) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([contenido], { type: tipo }));
+  a.download = nombre; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+// CSV con ";" porque es lo que Excel en español (Colombia) abre directo en columnas.
+function exportarCSV() {
+  if (!S.tx.length) return toast('No hay movimientos');
+  const campo = v => /[";\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  const TIPO = { gasto: 'Gasto', ingreso: 'Ingreso', fijo: 'Gasto fijo', pago: 'Pago de deuda', ajuste: 'Ajuste' };
+  const filas = [...S.tx].sort((a, b) => a.f.localeCompare(b.f))
+    .map(x => [x.f, TIPO[x.t] || x.t, x.c, x.n || '', x.m, x.auto ? 'sí' : ''].map(v => campo(String(v))).join(';'));
+  descargar('plata-movimientos-' + today() + '.csv', '﻿' + ['fecha;tipo;categoria;nota;monto;automatico', ...filas].join('\r\n'), 'text/csv');
+}
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 1800); }
 
 /* ---------- almacenamiento ---------- */
 let S = null, memoria = null;
-function load() { try { const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; } catch (e) { return memoria; } }
+function load() { try { const r = localStorage.getItem(KEY); return r ? sanear(JSON.parse(r)) : null; } catch (e) { return memoria; } }
+
+// Revisa un estado (guardado o importado) y lo deja con la forma que espera la app.
+// Así un respaldo viejo, incompleto o editado a mano no deja la app rota ni mete código en la página.
+const esFecha = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+const esId = v => typeof v === 'string' && /^[\w-]{1,64}$/.test(v);
+const entero = v => { const n = Math.round(Number(v)); return Number.isFinite(n) ? n : 0; };
+const dia31 = v => Math.min(31, Math.max(1, entero(v) || 1));
+const texto = (v, max = 60) => String(v ?? '').slice(0, max);
+const lista = (a, f) => Array.isArray(a) ? a.map(x => { try { return x && typeof x === 'object' ? f(x) : null; } catch (e) { return null; } }).filter(Boolean) : [];
+function sanear(d) {
+  if (!d || typeof d !== 'object' || !Array.isArray(d.tx)) return null;
+  const hoyS = today(), FINDE = ['igual', 'antes', 'despues'], TIPOS = ['gasto', 'ingreso', 'fijo', 'pago', 'ajuste'];
+  const creado = v => esFecha(v) ? v : hoyS;
+  return {
+    v: 1,
+    saldoInicial: entero(d.saldoInicial),
+    inicio: esFecha(d.inicio) ? d.inicio : hoyS,
+    lastRun: esFecha(d.lastRun) && d.lastRun <= hoyS ? d.lastRun : hoyS,
+    gastoDiario: d.gastoDiario == null || d.gastoDiario === '' ? null : Math.max(0, entero(d.gastoDiario)),
+    tx: lista(d.tx, x => esFecha(x.f) && Number.isFinite(Number(x.m)) ? {
+      id: esId(x.id) ? x.id : uid(), f: x.f, m: entero(x.m), t: TIPOS.includes(x.t) ? x.t : (Number(x.m) < 0 ? 'gasto' : 'ingreso'),
+      c: texto(x.c) || 'Otros', n: texto(x.n, 120), ...(esId(x.ref) ? { ref: x.ref } : {}), ...(x.auto ? { auto: 1 } : {})
+    } : null),
+    ingresos: lista(d.ingresos, i => {
+      const dias = [...new Set((Array.isArray(i.dias) ? i.dias : [i.dias]).map(entero).filter(n => n >= 1 && n <= 31))].sort((a, b) => a - b);
+      return dias.length && entero(i.m) > 0 ? { id: esId(i.id) ? i.id : uid(), creado: creado(i.creado), n: texto(i.n) || 'Ingreso', m: entero(i.m), dias, finde: FINDE.includes(i.finde) ? i.finde : 'igual' } : null;
+    }),
+    fijos: lista(d.fijos, f => entero(f.m) > 0 ? { id: esId(f.id) ? f.id : uid(), creado: creado(f.creado), n: texto(f.n) || 'Gasto fijo', m: entero(f.m), dia: dia31(f.dia) } : null),
+    deudas: lista(d.deudas, x => {
+      const base = { id: esId(x.id) ? x.id : uid(), creado: creado(x.creado), n: texto(x.n) || 'Deuda', saldo: Math.max(0, entero(x.saldo)) };
+      if (x.tipo === 'unico') return esFecha(x.fecha) ? { ...base, tipo: 'unico', fecha: x.fecha } : null;
+      return entero(x.cuota) > 0 ? { ...base, tipo: 'cuotas', cuota: entero(x.cuota), dia: dia31(x.dia), interes: Math.max(0, Math.min(100, Number(x.interes) || 0)) } : null;
+    })
+  };
+}
 function save() { memoria = S; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 
 /* ---------- fechas de pago ---------- */
@@ -226,8 +276,8 @@ function veredictos() {
 let tab = 'inicio', modo = 'gasto', cat = 'Comida', fHasta = null;
 
 const txRow = x => `<div class="row"><div style="min-width:0"><div>${esc(x.n || x.c)}</div><div class="mu xs">${x.n ? esc(x.c) : ''}${x.auto ? (x.n ? ' · ' : '') + 'automático' : ''}</div></div>
-  <div class="r" style="display:flex;align-items:center;gap:8px"><span class="${x.m > 0 ? 'ok' : ''}">${x.m > 0 ? '+' : ''}${fmt(x.m)}</span><button class="x" data-act="del" data-id="${x.id}" aria-label="Borrar">×</button></div></div>`;
-const vRow = v => `<div class="row tap" data-act="edit" data-k="deudas" data-id="${v.d.id}"><div><div>${esc(v.d.n)}</div><div class="${v.cls} sm">${v.txt}</div></div>
+  <div class="r" style="display:flex;align-items:center;gap:8px"><span class="${x.m > 0 ? 'ok' : ''}">${x.m > 0 ? '+' : ''}${fmt(x.m)}</span><button class="x" data-act="del" data-id="${esc(x.id)}" aria-label="Borrar">×</button></div></div>`;
+const vRow = v => `<div class="row tap" data-act="edit" data-k="deudas" data-id="${esc(v.d.id)}"><div><div>${esc(v.d.n)}</div><div class="${v.cls} sm">${v.txt}</div></div>
   <div class="r">${fmt(v.d.saldo)}<div class="mu xs">${v.d.tipo === 'unico' ? 'pago el ' + fd(v.d.fecha) : fmt(v.d.cuota) + ' cada ' + v.d.dia}</div></div></div>`;
 
 function vInicio() {
@@ -250,27 +300,44 @@ function vInicio() {
     <button class="btn" data-act="addtx">Agregar ${modo === 'gasto' ? 'gasto' : 'ingreso'}</button></div>`;
   const hoy = S.tx.filter(x => x.f === today()).reverse();
   if (hoy.length) {
-    const g = hoy.filter(x => x.m < 0).reduce((a, x) => a - x.m, 0);
-    h += `<div class="card"><div class="hd"><span class="lbl">Hoy</span><span class="mu sm">gastado ${fmt(g)}</span></div>${hoy.map(txRow).join('')}</div>`;
+    h += `<div class="card"><div class="hd"><span class="lbl">Hoy</span><span class="mu sm">gastado ${fmt(gastoDe(hoy))}</span></div>${hoy.map(txRow).join('')}</div>`;
   }
   if (v.length) h += `<div class="card"><div class="hd"><span class="lbl">Tus deudas</span></div>${v.map(vRow).join('')}</div>`;
   return h;
 }
 
+const MESES_L = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const mesMas = (ym, n) => { const [y, m] = ym.split('-').map(Number); const d = new Date(y, m - 1 + n, 1); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
+// Los ajustes de saldo corrigen el total pero no son plata que entró o salió de verdad.
+const real = x => x.t !== 'ajuste';
+const gastoDe = txs => txs.filter(x => real(x) && x.m < 0).reduce((a, x) => a - x.m, 0);
+let mesVer = null;
+
 function vMov() {
-  const mes = today().slice(0, 7), dm = pd(today());
-  const m = S.tx.filter(x => x.f.startsWith(mes));
-  const ing = m.filter(x => x.m > 0).reduce((a, x) => a + x.m, 0);
-  const gas = m.filter(x => x.m < 0).reduce((a, x) => a - x.m, 0);
-  const cats = {}; m.filter(x => x.m < 0).forEach(x => cats[x.c] = (cats[x.c] || 0) - x.m);
+  const mesHoy = today().slice(0, 7);
+  if (!mesVer || mesVer > mesHoy) mesVer = mesHoy;
+  const primero = S.tx.reduce((a, x) => x.f < a ? x.f : a, S.inicio).slice(0, 7);
+  const [y, mo] = mesVer.split('-').map(Number);
+  const m = S.tx.filter(x => x.f.startsWith(mesVer));
+  const ing = m.filter(x => real(x) && x.m > 0).reduce((a, x) => a + x.m, 0);
+  const gas = gastoDe(m);
+  const ant = gastoDe(S.tx.filter(x => x.f.startsWith(mesMas(mesVer, -1))));
+  const cats = {}; m.filter(x => real(x) && x.m < 0).forEach(x => cats[x.c] = (cats[x.c] || 0) - x.m);
   const top = Object.entries(cats).sort((a, b) => b[1] - a[1]);
-  let h = `<div class="card"><div class="lbl">${['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][dm.getMonth()]}</div>
+  const flecha = (dir, ok) => `<button class="icon-btn" data-act="mes" data-n="${dir}" ${ok ? '' : 'disabled style="opacity:.25"'} aria-label="${dir < 0 ? 'Mes anterior' : 'Mes siguiente'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${dir < 0 ? 'm15 18-6-6 6-6' : 'm9 18 6-6-6-6'}"/></svg></button>`;
+  let comp = '';
+  if (ant && gas) {
+    const pct = Math.round((gas - ant) / ant * 100);
+    comp = `<div class="mu xs" style="margin-top:6px">${pct === 0 ? 'Igual que' : `<span class="${pct > 0 ? 'warn' : 'ok'}">${pct > 0 ? '+' : '−'}${Math.abs(pct)}%</span> de gasto vs`} ${MESES_L[(mo + 10) % 12].toLowerCase()}${mesVer === mesHoy ? ' (mes en curso)' : ''}</div>`;
+  }
+  let h = `<div class="card"><div class="hd" style="margin:-6px -6px 0">${flecha(-1, mesVer > primero)}<span class="lbl">${MESES_L[mo - 1]}${y !== new Date().getFullYear() ? ' ' + y : ''}</span>${flecha(1, mesVer < mesHoy)}</div>
     <div class="grid2" style="margin-top:8px"><div><div class="mu xs">Entró</div><div class="ok" style="font-size:20px;font-weight:650">${fmt(ing)}</div></div><div><div class="mu xs">Salió</div><div style="font-size:20px;font-weight:650">${fmt(gas)}</div></div></div>
-    ${top.length ? '<div style="margin-top:14px">' + top.map(([c, v]) => `<div style="margin-top:9px"><div class="hd sm" style="margin:0"><span>${esc(c)}</span><span class="mu">${fmt(v)}</span></div><div class="bar"><i style="width:${(v / top[0][1] * 100).toFixed(1)}%"></i></div></div>`).join('') + '</div>' : ''}</div>`;
-  const all = S.tx.map((x, i) => [x, i]).sort((a, b) => b[0].f.localeCompare(a[0].f) || b[1] - a[1]).map(a => a[0]).slice(0, 400);
-  if (!all.length) return h + `<div class="card"><div class="empty">Aún no hay movimientos. Agrega tu primer gasto en Inicio.</div></div>`;
+    ${comp}
+    ${top.length ? '<div style="margin-top:14px">' + top.map(([c, v]) => `<div style="margin-top:9px"><div class="hd sm" style="margin:0"><span>${esc(c)}</span><span class="mu">${fmt(v)} · ${Math.round(v / gas * 100)}%</span></div><div class="bar"><i style="width:${(v / top[0][1] * 100).toFixed(1)}%"></i></div></div>`).join('') + '</div>' : ''}</div>`;
+  const all = m.map((x, i) => [x, i]).sort((a, b) => b[0].f.localeCompare(a[0].f) || b[1] - a[1]).map(a => a[0]);
+  if (!all.length) return h + `<div class="card"><div class="empty">${S.tx.length ? 'No hay movimientos en este mes.' : 'Aún no hay movimientos. Agrega tu primer gasto en Inicio.'}</div></div>`;
   let cur = '', grp = [];
-  const flush = () => { if (!grp.length) return; const g = grp.filter(x => x.m < 0).reduce((a, x) => a - x.m, 0); h += `<div class="day"><span>${cur === today() ? 'Hoy' : cur === addD(today(), -1) ? 'Ayer' : fd(cur)}</span><span>${g ? '−' + fmt(g).slice(1) : ''}</span></div><div class="card" style="padding:4px 16px 12px">${grp.map(txRow).join('')}</div>`; grp = []; };
+  const flush = () => { if (!grp.length) return; const g = gastoDe(grp); h += `<div class="day"><span>${cur === today() ? 'Hoy' : cur === addD(today(), -1) ? 'Ayer' : fd(cur)}</span><span>${g ? '−' + fmt(g) : ''}</span></div><div class="card" style="padding:4px 16px 12px">${grp.map(txRow).join('')}</div>`; grp = []; };
   for (const x of all) { if (x.f !== cur) { flush(); cur = x.f; } grp.push(x); }
   flush();
   return h;
@@ -279,7 +346,7 @@ function vMov() {
 function vPlanes() {
   const diasTxt = d => 'cada ' + (d.length > 1 ? d.slice(0, -1).join(', ') + ' y ' + d[d.length - 1] : d[0]);
   const sec = (t, k, rows, vacio) => `<div class="card"><div class="hd"><span class="lbl">${t}</span><button class="add" data-act="new" data-k="${k}">+ Agregar</button></div>${rows.length ? rows.join('') : `<div class="empty">${vacio}</div>`}</div>`;
-  const row = (k, id, n, sub, val, cls) => `<div class="row tap" data-act="edit" data-k="${k}" data-id="${id}"><div><div>${esc(n)}</div><div class="mu sm">${sub}</div></div><div class="r ${cls || ''}">${val}</div></div>`;
+  const row = (k, id, n, sub, val, cls) => `<div class="row tap" data-act="edit" data-k="${k}" data-id="${esc(id)}"><div><div>${esc(n)}</div><div class="mu sm">${sub}</div></div><div class="r ${cls || ''}">${val}</div></div>`;
   const v = veredictos(), pagadas = S.deudas.filter(d => d.saldo <= 0);
   return sec('Ingresos recurrentes', 'ingresos', S.ingresos.map(i => row('ingresos', i.id, i.n, diasTxt(i.dias) + (i.finde === 'antes' ? ' · se adelanta si es finde' : i.finde === 'despues' ? ' · se corre al lunes' : ''), '+' + fmt(i.m), 'ok')), 'Ej: lo que te llega cada 15.')
     + sec('Gastos fijos', 'fijos', S.fijos.map(f => row('fijos', f.id, f.n, 'cada ' + f.dia, fmt(-f.m))), 'Arriendo, plan del celular, transporte mensual…')
@@ -438,7 +505,8 @@ function ajustes() {
     <button class="btn ghost" id="aGB">Guardar estimado</button>
     <div class="lbl" style="margin-top:22px">Respaldo</div>
     <div class="mu xs" style="margin-top:4px">Tus datos viven solo en este celular. Descarga un respaldo de vez en cuando.</div>
-    <div class="grid2"><button class="btn ghost" id="aE">Exportar</button><button class="btn ghost" id="aI">Importar</button></div>
+    <div class="grid2"><button class="btn ghost" id="aE">Respaldo</button><button class="btn ghost" id="aI">Restaurar</button></div>
+    <button class="btn ghost" id="aC" style="margin-top:8px">Exportar movimientos a Excel (CSV)</button>
     <input type="file" id="aF" accept="application/json,.json" style="display:none">
     <button class="btn ghost bad" id="aX" style="margin-top:22px">Borrar todo</button>`);
   $('#aSB').onclick = () => {
@@ -447,18 +515,15 @@ function ajustes() {
     save(); closeSheet(); render(); toast('Saldo corregido');
   };
   $('#aGB').onclick = () => { const v = $('#aG').value.trim(); S.gastoDiario = v ? num(v) : null; save(); closeSheet(); render(); toast('Guardado'); };
-  $('#aE').onclick = () => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' }));
-    a.download = 'plata-respaldo-' + today() + '.json'; a.click();
-  };
+  $('#aE').onclick = () => descargar('plata-respaldo-' + today() + '.json', JSON.stringify(S, null, 1), 'application/json');
+  $('#aC').onclick = exportarCSV;
   $('#aI').onclick = () => $('#aF').click();
   $('#aF').onchange = e => {
-    const file = e.target.files[0]; if (!file) return;
+    const file = e.target.files[0]; e.target.value = ''; if (!file) return;
     file.text().then(t => {
-      const d = JSON.parse(t);
-      if (!Array.isArray(d.tx) || !Array.isArray(d.ingresos)) throw 0;
-      if (!confirm('Esto reemplaza todos tus datos actuales. ¿Seguir?')) return;
+      const d = sanear(JSON.parse(t));
+      if (!d) throw 0;
+      if (!confirm(`El respaldo tiene ${d.tx.length} movimientos. Esto reemplaza todos tus datos actuales. ¿Seguir?`)) return;
       S = d; save(); aplicar(); closeSheet(); render(); toast('Respaldo importado');
     }).catch(() => toast('Ese archivo no es un respaldo válido'));
   };
@@ -504,6 +569,7 @@ document.addEventListener('click', e => {
     ({ ingresos: formIngreso, fijos: formFijo, deudas: formDeuda })[k](it);
   }
   else if (a === 'hasta') { fHasta = el.dataset.f; render(); }
+  else if (a === 'mes') { mesVer = mesMas(mesVer, Number(el.dataset.n)); render(); }
   else if (a === 'sim') simular();
   else if (a === 'simsave') { const l = simular.last; if (!l) return; if (l.f <= today()) return toast('Para guardarlo, la fecha debe ser desde mañana'); formDeuda({ n: '', tipo: 'unico', saldo: l.m, fecha: l.f }); }
   else if (a === 'ajustes') { if (S) ajustes(); }

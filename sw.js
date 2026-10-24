@@ -1,6 +1,6 @@
 // Cache para que la app abra sin internet.
 // Responde desde caché y actualiza en segundo plano (los cambios se ven al siguiente arranque).
-const CACHE = 'plata-v3';
+const CACHE = 'plata-v4';
 const ASSETS = [
   './',
   './index.html',
