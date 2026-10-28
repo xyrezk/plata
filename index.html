@@ -57,7 +57,7 @@ input:focus,select:focus{border-color:#3a404b}
 .verdict.ok{background:#3ddc9714;color:var(--tx);border:1px solid #3ddc9740}
 .verdict.bad{background:#ff6b6b14;color:var(--tx);border:1px solid #ff6b6b40}
 .verdict.warn{background:#ffc35c14;color:var(--tx);border:1px solid #ffc35c40}
-svg.chart{width:100%;height:auto;display:block;margin-top:10px}
+svg.chart{width:100%;height:auto;display:block;margin-top:10px;touch-action:pan-y;cursor:crosshair;user-select:none;-webkit-user-select:none}
 nav{position:fixed;bottom:0;left:0;right:0;background:#0f1216f0;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
 nav div{display:flex;max-width:560px;margin:0 auto}
 nav button{flex:1;background:none;border:0;color:var(--mu);padding:9px 0 10px;font-size:11.5px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font-family:inherit}
@@ -228,8 +228,9 @@ function proyectar(hasta, extra) {
   const pts = [[t, b]]; let min = { b, f: t };
   for (let s = addD(t, 1); s <= hasta; s = addD(s, 1)) {
     b -= g; tot.var += g;
+    const evs = [];
     for (const e of eventos(s, deudas)) {
-      b += e.m;
+      b += e.m; evs.push(e);
       if (e.t === 'ingreso') tot.ing += e.m; else if (e.t === 'fijo') tot.fijo -= e.m; else tot.pago -= e.m;
       if (e.t === 'pago') {
         const r = res[e.ref];
@@ -239,7 +240,7 @@ function proyectar(hasta, extra) {
     }
     if (extra && s === extra.f) { b -= extra.m; extra.b = b; }
     if (extra && s >= extra.f && (extra.minB == null || b < extra.minB)) { extra.minB = b; extra.minF = s; }
-    pts.push([s, b]);
+    pts.push([s, b, evs]);
     if (b < min.b) min = { b, f: s };
   }
   return { b, pts, min, res, g, tot };
@@ -355,26 +356,53 @@ function vPlanes() {
     <p class="mu xs" style="padding:0 4px 8px">Los ingresos, gastos fijos y cuotas se registran solos en su fecha. Si algo no pasó, bórralo en Movimientos.</p>`;
 }
 
+let CH = null; // datos del gráfico actual para el dedo
 function chart(pts, min) {
   const W = 320, H = 150, P = 10, n = pts.length;
   const mi = pts.findIndex(p => p[0] === min.f);
   const k = Math.max(1, Math.ceil(n / 160));
-  const s = pts.filter((_, i) => i % k === 0 || i === n - 1 || i === mi);
-  const vals = s.map(p => p[1]);
+  const idx = pts.map((_, i) => i).filter(i => i % k === 0 || i === n - 1 || i === mi);
+  const vals = pts.map(p => p[1]);
   let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals); if (hi === lo) hi = lo + 1;
-  const x = i => P + i * (W - 2 * P) / Math.max(1, s.length - 1);
+  const x = i => P + i * (W - 2 * P) / Math.max(1, n - 1);
   const y = v => P + (hi - v) * (H - 2 * P) / (hi - lo);
-  const line = s.map((p, i) => x(i).toFixed(1) + ',' + y(p[1]).toFixed(1)).join(' ');
-  const smi = s.findIndex(p => p[0] === min.f);
-  return `<svg class="chart" viewBox="0 0 ${W} ${H + 18}">
+  const line = idx.map(i => x(i).toFixed(1) + ',' + y(pts[i][1]).toFixed(1)).join(' ');
+  CH = { pts, x, y, W, P, H, n };
+  return `<svg class="chart" id="chart" viewBox="0 0 ${W} ${H + 18}">
     <defs><linearGradient id="gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3ddc97" stop-opacity=".28"/><stop offset="1" stop-color="#3ddc97" stop-opacity="0"/></linearGradient></defs>
-    <polygon points="${x(0).toFixed(1)},${y(lo).toFixed(1)} ${line} ${x(s.length - 1).toFixed(1)},${y(lo).toFixed(1)}" fill="url(#gr)"/>
+    <polygon points="${x(0).toFixed(1)},${y(lo).toFixed(1)} ${line} ${x(n - 1).toFixed(1)},${y(lo).toFixed(1)}" fill="url(#gr)"/>
     ${lo < 0 ? `<line x1="${P}" x2="${W - P}" y1="${y(0)}" y2="${y(0)}" stroke="#ff6b6b" stroke-dasharray="4 4" stroke-width="1"/>` : ''}
     <polyline points="${line}" fill="none" stroke="#3ddc97" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-    ${smi >= 0 ? `<circle cx="${x(smi)}" cy="${y(s[smi][1])}" r="4" fill="${min.b < 0 ? '#ff6b6b' : '#ffc35c'}"/>` : ''}
+    ${mi >= 0 ? `<circle cx="${x(mi)}" cy="${y(pts[mi][1])}" r="4" fill="${min.b < 0 ? '#ff6b6b' : '#ffc35c'}"/>` : ''}
+    <g id="cSel" style="display:none">
+      <line id="cSelL" y1="${P}" y2="${H}" stroke="#e8eaed" stroke-opacity=".35" stroke-width="1"/>
+      <circle id="cSelC" r="5.5" fill="#0d0f12" stroke="#e8eaed" stroke-width="2"/>
+    </g>
     <text x="${P}" y="${H + 14}" fill="#8b919a" font-size="11">Hoy</text>
     <text x="${W - P}" y="${H + 14}" fill="#8b919a" font-size="11" text-anchor="end">${fd(pts[n - 1][0])}</text></svg>`;
 }
+function selChart(clientX) {
+  const svg = $('#chart'); if (!svg || !CH) return;
+  const rc = svg.getBoundingClientRect();
+  const vx = (clientX - rc.left) * CH.W / rc.width;
+  const i = Math.max(0, Math.min(CH.n - 1, Math.round((vx - CH.P) / (CH.W - 2 * CH.P) * (CH.n - 1))));
+  if (i === CH.sel) return; CH.sel = i;
+  const [f, b, evs] = CH.pts[i];
+  $('#cSel').style.display = '';
+  $('#cSelL').setAttribute('x1', CH.x(i)); $('#cSelL').setAttribute('x2', CH.x(i));
+  $('#cSelC').setAttribute('cx', CH.x(i)); $('#cSelC').setAttribute('cy', CH.y(b));
+  const d = diff(today(), f);
+  $('#cLbl').textContent = d === 0 ? 'Hoy tienes' : `El ${fd(f)} tendrías · ${d === 1 ? 'mañana' : 'en ' + d + ' días'}`;
+  const big = $('#cBig'); big.textContent = fmt(b); big.classList.toggle('bad', b < 0);
+  const ev = $('#cEv');
+  if (evs && evs.length) { ev.className = 'xs'; ev.innerHTML = evs.map(e => `<span class="${e.m > 0 ? 'ok' : 'mu'}">${esc(e.n)} ${e.m > 0 ? '+' : ''}${fmt(e.m)}</span>`).join(' · '); }
+  else { ev.className = 'mu xs'; ev.textContent = d === 0 ? 'Saldo de hoy' : 'Solo gasto del día a día'; }
+  if (navigator.vibrate && evs && evs.length) try { navigator.vibrate(8); } catch (e) {}
+}
+let chDrag = false;
+document.addEventListener('pointerdown', e => { if (e.target.closest('#chart')) { chDrag = true; selChart(e.clientX); } });
+document.addEventListener('pointermove', e => { if (chDrag) selChart(e.clientX); });
+['pointerup', 'pointercancel'].forEach(t => document.addEventListener(t, () => { chDrag = false; }));
 
 function vFuturo() {
   const t = today(); if (!fHasta || fHasta <= t) fHasta = addD(t, 30);
@@ -383,7 +411,8 @@ function vFuturo() {
   return `<div class="card"><div class="lbl">¿Cuánto voy a tener?</div>
     <div class="chips">${pre.map(([l, f]) => `<button class="chip ${f === fHasta ? 'on' : ''}" data-act="hasta" data-f="${f}">${l}</button>`).join('')}</div>
     <input type="date" id="fH" value="${fHasta}" min="${addD(t, 1)}"></div>
-  <div class="card"><div class="lbl">El ${fd(fHasta)} tendrías</div><div class="big ${r.b < 0 ? 'bad' : ''}">${fmt(r.b)}</div>
+  <div class="card"><div class="lbl" id="cLbl">El ${fd(fHasta)} tendrías</div><div class="big ${r.b < 0 ? 'bad' : ''}" id="cBig">${fmt(r.b)}</div>
+    <div class="mu xs" id="cEv" style="min-height:17px">Desliza el dedo sobre el gráfico para ver cualquier día</div>
     ${chart(r.pts, r.min)}
     <div style="margin-top:8px">
       <div class="row sm"><span class="mu">Punto más bajo</span><span class="r ${r.min.b < 0 ? 'bad' : 'warn'}">${fmt(r.min.b)} · ${r.min.f === t ? 'hoy' : fd(r.min.f)}</span></div>
